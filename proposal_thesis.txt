@@ -1,0 +1,83 @@
+# Master's Thesis Proposal Strategy: Sequential Recommendation Systems
+
+## Your Data Assets
+
+You have a strong setup for a **recommendation system** thesis:
+
+- **Sequential watch history** → captures user behavior over time
+- **Watch time per content** → implicit feedback signal (engagement quality)
+- **Content metadata** → enables content-based and hybrid approaches
+
+---
+
+## Recommended Thesis Framing
+
+> *"Improving sequential recommendation by incorporating implicit feedback signals (watch time) and content metadata"*
+
+This is focused, achievable in a master's timeline, and has clear novelty potential.
+
+---
+
+## Research Strategy (Step by Step)
+
+**1. Start with baselines**
+Implement standard sequential models first so you have something to beat:
+- **GRU4Rec** – RNN-based session recommendation
+- **SASRec** – Self-attention based sequential model
+- **BERT4Rec** – Bidirectional transformer for recommendation
+
+**2. Identify the gap**
+Most sequential models treat all interactions equally. Your watch time data lets you ask: *"Does a user who watched 90% of a film signal stronger preference than one who watched 10%?"* — this is your research angle.
+
+**3. Propose your method**
+Introduce watch time as a **weighting or gating mechanism** into a baseline model. This is your core contribution.
+
+---
+
+## 3 Simple Research Directions
+
+### Direction 1 — Watch-Time Weighted Sequential Model ⭐ (Easiest)
+Modify SASRec or GRU4Rec to weight attention scores by normalized watch time. Items watched longer get higher influence on the next prediction.
+
+- **Novelty**: Simple but underexplored
+- **Effort**: Low-medium
+- **Risk**: Low
+
+### Direction 2 — Metadata-Enriched Sequential Recommendation
+Enrich item embeddings with content metadata (genre, duration, language, cast) using a side-information encoder, then feed into a sequential model.
+
+- **Novelty**: Well-studied but you can combine with watch time
+- **Effort**: Medium
+- **Risk**: Low
+
+### Direction 3 — User Interest Drift Detection
+Use watch time patterns over time to detect when a user's taste **shifts** (e.g., from action to documentary). Model short-term vs. long-term interest separately.
+
+- **Novelty**: More original
+- **Effort**: Medium-high
+- **Risk**: Medium
+
+---
+
+## Suggested Thesis Structure
+
+| Chapter | Content |
+|---|---|
+| 1. Introduction | Problem, motivation, research questions |
+| 2. Related Work | Sequential rec, implicit feedback, content-aware rec |
+| 3. Data Analysis | EDA on your dataset, watch time distribution |
+| 4. Proposed Method | Your model with watch-time integration |
+| 5. Experiments | Metrics: HR@K, NDCG@K, MRR |
+| 6. Conclusion | Findings, limitations, future work |
+
+---
+
+## My Recommendation
+
+Go with **Direction 1 + 2 combined**: take **SASRec as your backbone**, weight attention by watch time, and enrich item embeddings with metadata. This is:
+- ✅ Simple enough to finish in time
+- ✅ Has clear baseline comparisons
+- ✅ Produces measurable improvements
+- ✅ Novel enough to publish
+
+Would you like me to go deeper on any specific direction, help outline the related work, or sketch out the model architecture?

@@ -1,0 +1,7 @@
+model: WTGru4Rec
+
+embedding_size: 64
+hidden_size: 128
+num_layers: 1
+dropout_prob: 0.1
+loss_type: BPR

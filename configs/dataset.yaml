@@ -1,0 +1,54 @@
+# ── Dataset Configuration ────────────────────────────────────────────────────
+dataset: thesis_dataset
+
+# Path to data directory (RecBole looks for data/<dataset>/<dataset>.inter)
+data_path: data
+
+# Fields in the .inter file
+USER_ID_FIELD: user_id
+ITEM_ID_FIELD: item_id
+TIME_FIELD: timestamp
+
+# Field types
+load_col:
+  inter: [user_id, item_id, timestamp, watch_time]
+
+# ── Filtering ────────────────────────────────────────────────────────────────
+# Already filtered in preprocessing; set low thresholds to avoid double-filtering
+user_inter_num_interval: "[5, inf)"
+item_inter_num_interval: "[1, inf)"
+
+# ── Splitting Strategy ───────────────────────────────────────────────────────
+# Leave-one-out: last item → test, 2nd-last → val, rest → train
+# Standard evaluation protocol for sequential recommendation
+eval_args:
+  split: {LS: valid_and_test}    # Leave-one-out split
+  order: TO                       # Time-ordered
+  group_by: user
+  mode: full                      # Evaluate against all items (full ranking)
+
+# ── Evaluation Metrics ───────────────────────────────────────────────────────
+metrics: [Recall, NDCG, MRR, Hit]
+topk: [5, 10, 20]
+valid_metric: NDCG@10
+
+# ── Training ─────────────────────────────────────────────────────────────────
+epochs: 50
+train_batch_size: 4096        # Larger batches = fewer iterations = faster on MPS
+eval_batch_size: 512
+stopping_step: 10             # Early stopping patience
+eval_step: 1                  # Evaluate every epoch
+learner: adam
+learning_rate: 0.001
+neg_sampling: ~               # Sequential models use sampled softmax internally
+
+# ── Device ───────────────────────────────────────────────────────────────────
+use_gpu: true              # Use MPS on Apple Silicon (Metal Performance Shaders)
+
+# ── Reproducibility ──────────────────────────────────────────────────────────
+seed: 42
+reproducibility: True
+
+# ── Logging ──────────────────────────────────────────────────────────────────
+show_progress: True
+log_wandb: False

@@ -1,0 +1,12 @@
+# ── GRU4Rec Configuration ────────────────────────────────────────────────────
+# Paper: Hidasi et al., "Session-based Recommendations with Recurrent Neural Networks" (2016)
+# RNN-based sequential recommendation model
+
+model: GRU4Rec
+
+# Model hyperparameters
+embedding_size: 64
+hidden_size: 128
+num_layers: 1
+dropout_prob: 0.1
+loss_type: BPR              # Bayesian Personalised Ranking loss

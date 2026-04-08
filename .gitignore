@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Tensorboard logs
+log_tensorboard/
+
+# Saved models
+saved/*.pth
+
+# Logs
+log/
+
+# Large data files
+*.parquet
+data/thesis_dataset/thesis_dataset.inter

@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="vi" xml:lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta name="author" content="Master’s Thesis — Sequential Recommendation" />
+  <meta name="dcterms.date" content="2026-01-01" />
+  <title>WTSASRec — Kiến trúc &amp; Phân tích Triển khai</title>
+  <style>
+    /* Default styles provided by pandoc.
+    ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+    */
+    span.smallcaps{font-variant: small-caps;}
+    div.columns{display: flex; gap: min(4vw, 1.5em);}
+    div.column{flex: auto; overflow-x: auto;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    /* The extra [class] is a hack that increases specificity enough to
+       override a similar rule in reveal.js */
+    ul.task-list[class]{list-style: none;}
+    ul.task-list li input[type="checkbox"] {
+      font-size: inherit;
+      width: 0.8em;
+      margin: 0 0.8em 0.2em -1.6em;
+      vertical-align: middle;
+    }
+    /* CSS for syntax highlighting */
+    html { -webkit-text-size-adjust: 100%; }
+    pre > code.sourceCode { white-space: pre; position: relative; }
+    pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+    pre > code.sourceCode > span:empty { height: 1.2em; }
+    .sourceCode { overflow: visible; }
+    code.sourceCode > span { color: inherit; text-decoration: inherit; }
+    div.sourceCode { margin: 1em 0; }
+    pre.sourceCode { margin: 0; }
+    @media screen {
+    div.sourceCode { overflow: auto; }
+    }
+    @media print {
+    pre > code.sourceCode { white-space: pre-wrap; }
+    pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+    }
+    pre.numberSource code
+      { counter-reset: source-line 0; }
+    pre.numberSource code > span
+      { position: relative; left: -4em; counter-increment: source-line; }
+    pre.numberSource code > span > a:first-child::before
+      { content: counter(source-line);
+        position: relative; left: -1em; text-align: right; vertical-align: baseline;
+        border: none; display: inline-block;
+        -webkit-touch-callout: none; -webkit-user-select: none;
+        -khtml-user-select: none; -moz-user-select: none;
+        -ms-user-select: none; user-select: none;
+        padding: 0 4px; width: 4em;
+        color: #aaaaaa;
+      }
+    pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+    div.sourceCode
+      {   }
+    @media screen {
+    pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+    }
+    code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+    code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+    code span.at { color: #7d9029; } /* Attribute */
+    code span.bn { color: #40a070; } /* BaseN */
+    code span.bu { color: #008000; } /* BuiltIn */
+    code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+    code span.ch { color: #4070a0; } /* Char */
+    code span.cn { color: #880000; } /* Constant */
+    code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+    code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+    code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+    code span.dt { color: #902000; } /* DataType */
+    code span.dv { color: #40a070; } /* DecVal */
+    code span.er { color: #ff0000; font-weight: bold; } /* Error */
+    code span.ex { } /* Extension */
+    code span.fl { color: #40a070; } /* Float */
+    code span.fu { color: #06287e; } /* Function */
+    code span.im { color: #008000; font-weight: bold; } /* Import */
+    code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+    code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+    code span.op { color: #666666; } /* Operator */
+    code span.ot { color: #007020; } /* Other */
+    code span.pp { color: #bc7a00; } /* Preprocessor */
+    code span.sc { color: #4070a0; } /* SpecialChar */
+    code span.ss { color: #bb6688; } /* SpecialString */
+    code span.st { color: #4070a0; } /* String */
+    code span.va { color: #19177c; } /* Variable */
+    code span.vs { color: #4070a0; } /* VerbatimString */
+    code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+  </style>
+  <link rel="stylesheet" href="wt_sasrec_pandoc_style.css" />
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">WTSASRec — Kiến trúc &amp; Phân tích Triển khai</h1>
+<p class="subtitle">Thesis Component: Watch Time as Attention Score
+Modifier</p>
+<p class="author">Master’s Thesis — Sequential Recommendation</p>
+<p class="date">2026</p>
+</header>
+<h1 id="wtsasrec-architecture-implementation-analysis">WTSASRec —
+Architecture &amp; Implementation Analysis</h1>
+<blockquote>
+<p><strong>Thesis contribution:</strong> <em>“Introduce watch time as a
+weighting or gating mechanism into a baseline model — items watched
+longer get higher influence on the next prediction.”</em></p>
+<p><strong>Core mechanism:</strong> <strong>Sửa đổi Attention
+Score</strong> (Attention Score Modification)</p>
+</blockquote>
+<hr />
+<h2 id="tổng-quan-cơ-chế-overview">1. Tổng quan cơ chế (Overview)</h2>
+<p>WTSASRec mở rộng SASRec bằng cách <strong>thêm một bias phụ thuộc vào
+watch time vào attention score trước khi tính softmax</strong>. Điều này
+khiến mỗi query tự nhiên chú ý nhiều hơn đến các item mà người dùng đã
+xem lâu hơn trong lịch sử.</p>
+<p><strong>Standard SASRec:</strong></p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>=</mo><mfrac><mrow><mi>Q</mi><msup><mi>K</mi><mi>T</mi></msup></mrow><msqrt><mi>d</mi></msqrt></mfrac><mo>+</mo><mi mathvariant="bold-italic">𝑴</mi><mo>,</mo><mspace width="2.0em"></mspace><mtext mathvariant="normal">output</mtext><mo>=</mo><mtext mathvariant="normal">softmax</mtext><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mi>V</mi></mrow><annotation encoding="application/x-tex">A = \frac{QK^T}{\sqrt{d}} + \mathbf{M}, \qquad \text{output} = \text{softmax}(A) \cdot V</annotation></semantics></math></p>
+<p><strong>WTSASRec</strong> thêm một số hạng watch-time bias:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>A</mi><mo>=</mo><mfrac><mrow><mi>Q</mi><msup><mi>K</mi><mi>T</mi></msup></mrow><msqrt><mi>d</mi></msqrt></mfrac><mo>+</mo><mi mathvariant="bold-italic">𝑴</mi><mo>+</mo><mi>α</mi><mo>⋅</mo><msub><mi mathvariant="bold-italic">𝒃</mi><mrow><mi>w</mi><mi>t</mi></mrow></msub></mrow><annotation encoding="application/x-tex">A = \frac{QK^T}{\sqrt{d}} + \mathbf{M} + \alpha \cdot \mathbf{b}_{wt}</annotation></semantics></math></p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mtext mathvariant="normal">output</mtext><mo>=</mo><mtext mathvariant="normal">softmax</mtext><mo stretchy="false" form="prefix">(</mo><mi>A</mi><mo stretchy="false" form="postfix">)</mo><mo>⋅</mo><mi>V</mi></mrow><annotation encoding="application/x-tex">\text{output} = \text{softmax}(A) \cdot V</annotation></semantics></math></p>
+<p>trong đó
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>α</mi><annotation encoding="application/x-tex">\alpha</annotation></semantics></math>
+là <strong>learnable scalar parameter</strong> (khởi tạo = 1.0), cho
+phép model tự học mức độ ảnh hưởng của watch time.
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi mathvariant="bold-italic">𝑴</mi><annotation encoding="application/x-tex">\mathbf{M}</annotation></semantics></math>
+là causal mask (upper-triangular
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>−</mi><mi>∞</mi></mrow><annotation encoding="application/x-tex">-\infty</annotation></semantics></math>).
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi mathvariant="bold-italic">𝒃</mi><mrow><mi>w</mi><mi>t</mi></mrow></msub><annotation encoding="application/x-tex">\mathbf{b}_{wt}</annotation></semantics></math>
+là watch-time bias vector.</p>
+<hr />
+<h2 id="watch-time-normalization">2. Watch-Time Normalization</h2>
+<p>Raw watch time (giây) được chuẩn hoá theo từng sequence:</p>
+<p><strong>Bước 1 — Log transform</strong> (giảm ảnh hưởng outlier):</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>ℓ</mi><mi>i</mi></msub><mo>=</mo><mrow><mi mathvariant="normal">log</mi><mo>&#8289;</mo></mrow><mo stretchy="false" form="prefix">(</mo><mn>1</mn><mo>+</mo><mi>w</mi><msub><mi>t</mi><mi>i</mi></msub><mo stretchy="false" form="postfix">)</mo><mo>,</mo><mspace width="2.0em"></mspace><mi>i</mi><mo>=</mo><mn>1</mn><mo>,</mo><mi>…</mi><mo>,</mo><mi>L</mi></mrow><annotation encoding="application/x-tex">\ell_i = \log(1 + wt_i), \qquad i = 1, \ldots, L</annotation></semantics></math></p>
+<p><strong>Bước 2 — Per-sequence max normalization</strong> (đưa về
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">[</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">[0, 1]</annotation></semantics></math>):</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mover><mi>w</mi><mo accent="true">̃</mo></mover><mi>i</mi></msub><mo>=</mo><mfrac><msub><mi>ℓ</mi><mi>i</mi></msub><mrow><munder><mi mathvariant="normal">max</mi><mi>j</mi></munder><mo stretchy="false" form="prefix">(</mo><msub><mi>ℓ</mi><mi>j</mi></msub><mo stretchy="false" form="postfix">)</mo><mo>+</mo><mi>ε</mi></mrow></mfrac></mrow><annotation encoding="application/x-tex">\tilde{w}_i = \frac{\ell_i}{\max_j(\ell_j) + \varepsilon}</annotation></semantics></math></p>
+<p>trong đó
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>ε</mi><mo>=</mo><msup><mn>10</mn><mrow><mi>−</mi><mn>8</mn></mrow></msup></mrow><annotation encoding="application/x-tex">\varepsilon = 10^{-8}</annotation></semantics></math>
+tránh chia cho 0. Kết quả:
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mover><mi>w</mi><mo accent="true">̃</mo></mover><mi>i</mi></msub><mo>∈</mo><mo stretchy="false" form="prefix">[</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">\tilde{w}_i \in [0, 1]</annotation></semantics></math>.</p>
+<hr />
+<h2 id="watch-time-bias-projection">3. Watch-Time Bias Projection</h2>
+<p>Scalar normalized watch time được chiếu thành bias riêng cho từng
+attention head:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi mathvariant="bold-italic">𝒃</mi><mrow><mi>w</mi><mi>t</mi></mrow></msub><mo>=</mo><msub><mi>W</mi><mtext mathvariant="normal">proj</mtext></msub><mo>⋅</mo><mover><mi mathvariant="bold-italic">𝒘</mi><mo accent="true">̃</mo></mover><mo>∈</mo><msup><mi mathvariant="double-struck">ℝ</mi><mrow><mi>B</mi><mo>×</mo><mi>L</mi><mo>×</mo><msub><mi>H</mi><mtext mathvariant="normal">heads</mtext></msub></mrow></msup></mrow><annotation encoding="application/x-tex">\mathbf{b}_{wt} = W_{\text{proj}} \cdot \tilde{\mathbf{w}} \in \mathbb{R}^{B \times L \times H_{\text{heads}}}</annotation></semantics></math></p>
+<p>trong đó
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>W</mi><mtext mathvariant="normal">proj</mtext></msub><mo>∈</mo><msup><mi mathvariant="double-struck">ℝ</mi><mrow><msub><mi>H</mi><mtext mathvariant="normal">heads</mtext></msub><mo>×</mo><mn>1</mn></mrow></msup></mrow><annotation encoding="application/x-tex">W_{\text{proj}} \in \mathbb{R}^{H_{\text{heads}} \times 1}</annotation></semantics></math>
+là linear projection learnable — mỗi attention head học một hệ số riêng
+cho watch-time signal.</p>
+<p><strong>Reshape để broadcast lên attention matrix:</strong></p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msubsup><mi mathvariant="bold-italic">𝒃</mi><mrow><mi>w</mi><mi>t</mi></mrow><mi>T</mi></msubsup><mo>∈</mo><msup><mi mathvariant="double-struck">ℝ</mi><mrow><mi>B</mi><mo>×</mo><msub><mi>H</mi><mtext mathvariant="normal">heads</mtext></msub><mo>×</mo><mn>1</mn><mo>×</mo><msub><mi>L</mi><mi>k</mi></msub></mrow></msup></mrow><annotation encoding="application/x-tex">\mathbf{b}_{wt}^{T} \in \mathbb{R}^{B \times H_{\text{heads}} \times 1 \times L_k}</annotation></semantics></math></p>
+<p>Shape
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>B</mi><mo>,</mo><mi>H</mi><mo>,</mo><mn>1</mn><mo>,</mo><msub><mi>L</mi><mi>k</mi></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(B, H, 1, L_k)</annotation></semantics></math>
+sẽ <strong>tự động broadcast</strong> lên
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>B</mi><mo>,</mo><mi>H</mi><mo>,</mo><msub><mi>L</mi><mi>q</mi></msub><mo>,</mo><msub><mi>L</mi><mi>k</mi></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(B, H, L_q, L_k)</annotation></semantics></math>
+— nghĩa là mọi query đều nhận cùng watch-time bias cho mỗi key.</p>
+<hr />
+<h2 id="luồng-dữ-liệu-đầy-đủ-full-data-flow">4. Luồng dữ liệu đầy đủ
+(Full Data Flow)</h2>
+<pre><code>Input:
+  item_seq        : (B, L)   — item ID sequence (padded)
+  watch_time_list : (B, L)   — raw watch time in seconds
+
+STEP 1 — Normalize watch time                      [WTSASRec]
+  wt_norm = log(1+wt) / (max(log(1+wt)) + eps)    → (B,L) in [0,1]
+
+STEP 2 — Project to per-head bias                  [WTSASRec]
+  wt_bias = Linear(1 → H_heads)(wt_norm)           → (B, L, H_heads)
+
+STEP 3 — Item + Position Embedding                 [WTSASRec.forward]
+  item_emb   = ItemEmbedding(item_seq)             → (B, L, H)
+  pos_emb    = PositionEmbedding(0..L-1)           → (B, L, H)
+  input_emb  = LayerNorm(Dropout(item+pos))        → (B, L, H)
+
+STEP 4 — Watch-Time Augmented Attention            [WTMultiHeadAttention]
+  Q = W_Q * input_emb     → (B, H_heads, L, d)    d = H/H_heads
+  K = W_K * input_emb     → (B, H_heads, d, L)    [transposed]
+  V = W_V * input_emb     → (B, H_heads, L, d)
+
+  A  = Q*K / sqrt(d)      → (B, H_heads, L, L)    raw scores
+  A += causal_mask         → broadcast (B,1,1,L)   future=-inf
+  A += alpha * wt_bias_t   → broadcast (B,H,1,L)  *** WT MODIFICATION
+
+  probs   = softmax(A)     → (B, H_heads, L, L)
+  context = probs * V      → (B, H_heads, L, d)
+  output  = LayerNorm(dense(context) + input_emb)  residual
+
+STEP 5 — FeedForward + Stack                       [WTTransformerEncoder]
+  output = FFN(attention_output)                   → (B, L, H)
+  [repeat x n_layers, same wt_bias for all layers]
+
+STEP 6 — Prediction + BPR Loss                     [WTSASRec]
+  seq_repr = output[:, seq_len-1, :]              → (B, H)
+  loss = BPR(seq_repr * emb_pos, seq_repr * emb_neg)</code></pre>
+<hr />
+<h2 id="sơ-đồ-kiến-trúc-architecture-diagram">5. Sơ đồ kiến trúc
+(Architecture Diagram)</h2>
+<figure>
+<img src="wt_sasrec_diagram.png" alt="WTSASRec Architecture Diagram" />
+<figcaption aria-hidden="true">WTSASRec Architecture
+Diagram</figcaption>
+</figure>
+<hr />
+<h2 id="learnable-parameters-tham-số-học-được">6. Learnable Parameters
+(Tham số học được)</h2>
+<table>
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+<col style="width: 25%" />
+</colgroup>
+<thead>
+<tr>
+<th>Tham số</th>
+<th>Shape</th>
+<th>Thuộc về</th>
+<th>Vai trò</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>wt_proj.weight</code></td>
+<td><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>H</mi><mtext mathvariant="normal">heads</mtext></msub><mo>×</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">H_{\text{heads}} \times 1</annotation></semantics></math></td>
+<td><code>WTSASRec</code></td>
+<td>Project
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mover><mi mathvariant="bold-italic">𝒘</mi><mo accent="true">̃</mo></mover><mo>→</mo></mrow><annotation encoding="application/x-tex">\tilde{\mathbf{w}} \to</annotation></semantics></math>
+per-head bias</td>
+</tr>
+<tr>
+<td><code>wt_proj.bias</code></td>
+<td><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>H</mi><mtext mathvariant="normal">heads</mtext></msub><annotation encoding="application/x-tex">H_{\text{heads}}</annotation></semantics></math></td>
+<td><code>WTSASRec</code></td>
+<td>Bias cho projection</td>
+</tr>
+<tr>
+<td><code>wt_alpha</code> (per layer)</td>
+<td>scalar
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>×</mi><msub><mi>n</mi><mtext mathvariant="normal">layers</mtext></msub></mrow><annotation encoding="application/x-tex">\times n_{\text{layers}}</annotation></semantics></math></td>
+<td><code>WTMultiHeadAttention</code></td>
+<td>Scale watch-time bias</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Ví dụ với</strong>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>n</mi><mtext mathvariant="normal">layers</mtext></msub><mo>=</mo><mn>2</mn><mo>,</mo><mspace width="0.222em"></mspace><msub><mi>n</mi><mtext mathvariant="normal">heads</mtext></msub><mo>=</mo><mn>2</mn></mrow><annotation encoding="application/x-tex">n_{\text{layers}}=2,\ n_{\text{heads}}=2</annotation></semantics></math>:</p>
+<table>
+<thead>
+<tr>
+<th>Tham số</th>
+<th>Số lượng</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>wt_proj.weight</code></td>
+<td>2</td>
+</tr>
+<tr>
+<td><code>wt_proj.bias</code></td>
+<td>2</td>
+</tr>
+<tr>
+<td><code>wt_alpha</code> × 2 layers</td>
+<td>2</td>
+</tr>
+<tr>
+<td><strong>Tổng cộng</strong></td>
+<td><strong>6 tham số bổ sung</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Trên nền SASRec với ~200k tham số, đây là sự bổ sung <strong>cực kỳ
+nhỏ</strong> (~0.003%).</p>
+<hr />
+<h2 id="so-sánh-sasrec-vs-wtsasrec">7. So sánh SASRec vs WTSASRec</h2>
+<table>
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 33%" />
+<col style="width: 33%" />
+</colgroup>
+<thead>
+<tr>
+<th></th>
+<th>SASRec</th>
+<th>WTSASRec</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Input</td>
+<td><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mi>i</mi></msub><mo>+</mo><msub><mi>p</mi><mi>i</mi></msub></mrow><annotation encoding="application/x-tex">e_i + p_i</annotation></semantics></math></td>
+<td><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>e</mi><mi>i</mi></msub><mo>+</mo><msub><mi>p</mi><mi>i</mi></msub></mrow><annotation encoding="application/x-tex">e_i + p_i</annotation></semantics></math>
+(không đổi)</td>
+</tr>
+<tr>
+<td>Attention score</td>
+<td><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mfrac><mrow><mi>Q</mi><msup><mi>K</mi><mi>T</mi></msup></mrow><msqrt><mi>d</mi></msqrt></mfrac><mo>+</mo><mi mathvariant="bold-italic">𝑴</mi></mrow><annotation encoding="application/x-tex">\frac{QK^T}{\sqrt{d}} + \mathbf{M}</annotation></semantics></math></td>
+<td><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mfrac><mrow><mi>Q</mi><msup><mi>K</mi><mi>T</mi></msup></mrow><msqrt><mi>d</mi></msqrt></mfrac><mo>+</mo><mi mathvariant="bold-italic">𝑴</mi><mo>+</mo><mi>α</mi><mo>⋅</mo><msub><mi mathvariant="bold-italic">𝒃</mi><mrow><mi>w</mi><mi>t</mi></mrow></msub></mrow><annotation encoding="application/x-tex">\frac{QK^T}{\sqrt{d}} + \mathbf{M} + \alpha \cdot \mathbf{b}_{wt}</annotation></semantics></math></td>
+</tr>
+<tr>
+<td>Watch-time signal</td>
+<td>Không dùng</td>
+<td>Dùng để bias attention</td>
+</tr>
+<tr>
+<td>Số tham số thêm</td>
+<td>0</td>
+<td>6 (với 2 layers, 2 heads)</td>
+</tr>
+<tr>
+<td>Backward compatible</td>
+<td>—</td>
+<td>Nếu
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>w</mi><mi>t</mi><mo>=</mo><mn>0</mn><mo>⇒</mo><msub><mi mathvariant="bold-italic">𝒃</mi><mrow><mi>w</mi><mi>t</mi></mrow></msub><mo>=</mo><mn>0</mn></mrow><annotation encoding="application/x-tex">wt=0 \Rightarrow \mathbf{b}_{wt}=0</annotation></semantics></math>
+→ giống SASRec</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Modification chỉ xảy ra tại 1 dòng trong code:</strong></p>
+<div class="sourceCode" id="cb2"><pre
+class="sourceCode python"><code class="sourceCode python"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a><span class="co"># WTMultiHeadAttention.forward()</span></span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>attention_scores <span class="op">=</span> attention_scores <span class="op">+</span> <span class="va">self</span>.wt_alpha <span class="op">*</span> wt_bias_t</span></code></pre></div>
+<hr />
+<h2 id="đánh-giá-tính-đúng-đắn-correctness-review">8. Đánh giá tính đúng
+đắn (Correctness Review)</h2>
+<h3 id="các-điểm-đúng">Các điểm đúng</h3>
+<table>
+<colgroup>
+<col style="width: 50%" />
+<col style="width: 50%" />
+</colgroup>
+<thead>
+<tr>
+<th>Điểm kiểm tra</th>
+<th>Kết quả</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bias thêm vào <strong>trước</strong> softmax</td>
+<td>Đúng vị trí</td>
+</tr>
+<tr>
+<td>Shape
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>B</mi><mo>,</mo><mi>H</mi><mo>,</mo><mn>1</mn><mo>,</mo><msub><mi>L</mi><mi>k</mi></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(B, H, 1, L_k)</annotation></semantics></math>
+broadcast lên
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">(</mo><mi>B</mi><mo>,</mo><mi>H</mi><mo>,</mo><msub><mi>L</mi><mi>q</mi></msub><mo>,</mo><msub><mi>L</mi><mi>k</mi></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">(B, H, L_q, L_k)</annotation></semantics></math></td>
+<td><code>.permute(0,2,1).unsqueeze(2)</code></td>
+</tr>
+<tr>
+<td>Causal mask áp dụng <strong>trước</strong> watch-time bias</td>
+<td>Thứ tự: mask → bias → softmax</td>
+</tr>
+<tr>
+<td><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mover><mi>w</mi><mo accent="true">̃</mo></mover><mi>i</mi></msub><mo>∈</mo><mo stretchy="false" form="prefix">[</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">\tilde{w}_i \in [0, 1]</annotation></semantics></math></td>
+<td>Log-normalize per-sequence</td>
+</tr>
+<tr>
+<td><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>α</mi><annotation encoding="application/x-tex">\alpha</annotation></semantics></math>
+learnable</td>
+<td><code>nn.Parameter(torch.ones(1))</code></td>
+</tr>
+<tr>
+<td>Fallback khi không có watch time</td>
+<td><code>if wt_bias is not None</code></td>
+</tr>
+</tbody>
+</table>
+<h3 id="vấn-đề-đã-phát-hiện-và-sửa">Vấn đề đã phát hiện và sửa</h3>
+<p><strong>Dead code đã được xóa:</strong>
+<code>WTMultiHeadAttention.__init__</code> trước đây định nghĩa
+<code>self.wt_proj = Linear(1, n_heads)</code> nhưng không bao giờ được
+gọi — bias được tính bởi <code>WTSASRec._compute_wt_bias()</code>. Tham
+số thừa này đã được xóa.</p>
+<h3 id="lưu-ý-thiết-kế">Lưu ý thiết kế</h3>
+<p><strong>Shared projection across layers:</strong>
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi mathvariant="bold-italic">𝒃</mi><mrow><mi>w</mi><mi>t</mi></mrow></msub><annotation encoding="application/x-tex">\mathbf{b}_{wt}</annotation></semantics></math>
+được tính <strong>một lần</strong> trong <code>WTSASRec.forward()</code>
+rồi truyền cho <strong>tất cả transformer layers</strong>. Mỗi layer có
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>α</mi><annotation encoding="application/x-tex">\alpha</annotation></semantics></math>
+riêng để scale, nhưng dùng chung
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>W</mi><mtext mathvariant="normal">proj</mtext></msub><annotation encoding="application/x-tex">W_{\text{proj}}</annotation></semantics></math>.
+Đây là lựa chọn thiết kế đơn giản — có thể nâng cấp thành per-layer
+projection nếu muốn biểu đạt cao hơn.</p>
+<hr />
+<h2 id="kết-quả-thực-nghiệm">9. Kết quả thực nghiệm</h2>
+<p>Sample: 2000 users, 3 epochs</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Recall@10</th>
+<th>NDCG@10</th>
+<th>MRR@10</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SASRec</td>
+<td>0.6975</td>
+<td>0.5057</td>
+<td>0.4432</td>
+</tr>
+<tr>
+<td><strong>WTSASRec</strong></td>
+<td><strong>0.7170</strong></td>
+<td><strong>0.5274</strong></td>
+<td><strong>0.4657</strong></td>
+</tr>
+<tr>
+<td>Cải thiện</td>
+<td>+2.8%</td>
+<td>+4.3%</td>
+<td>+5.1%</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="kết-luận">10. Kết luận</h2>
+<p>WTSASRec triển khai đúng khái niệm <strong>Sửa đổi Attention
+Score</strong>:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><munder><munder><mrow><mfrac><mrow><mi>Q</mi><msup><mi>K</mi><mi>T</mi></msup></mrow><msqrt><mi>d</mi></msqrt></mfrac><mo>+</mo><mi mathvariant="bold-italic">𝑴</mi></mrow><mo accent="true">⏟</mo></munder><mtext mathvariant="normal">SASRec gốc</mtext></munder><mo>+</mo><munder><munder><mrow><mi>α</mi><mo>⋅</mo><msub><mi>W</mi><mtext mathvariant="normal">proj</mtext></msub><mo>⋅</mo><mover><mi mathvariant="bold-italic">𝒘</mi><mo accent="true">̃</mo></mover></mrow><mo accent="true">⏟</mo></munder><mtext mathvariant="normal">Watch-Time (mới)</mtext></munder><mover><mo>→</mo><mtext mathvariant="normal">softmax</mtext></mover><mtext mathvariant="normal">attention weights</mtext></mrow><annotation encoding="application/x-tex">\underbrace{\frac{QK^T}{\sqrt{d}} + \mathbf{M}}_{\text{SASRec gốc}} + \underbrace{\alpha \cdot W_{\text{proj}} \cdot \tilde{\mathbf{w}}}_{\text{Watch-Time (mới)}} \xrightarrow{\text{softmax}} \text{attention weights}</annotation></semantics></math></p>
+<ul>
+<li><math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>w</mi><mi>t</mi><mo>↑</mo><mspace width="0.222em"></mspace><mo>⇒</mo><mspace width="0.222em"></mspace><mover><mi>w</mi><mo accent="true">̃</mo></mover><mo>↑</mo><mspace width="0.222em"></mspace><mo>⇒</mo><mspace width="0.222em"></mspace><msub><mi mathvariant="bold-italic">𝒃</mi><mrow><mi>w</mi><mi>t</mi></mrow></msub><mo>↑</mo><mspace width="0.222em"></mspace><mo>⇒</mo></mrow><annotation encoding="application/x-tex">wt \uparrow\ \Rightarrow\ \tilde{w} \uparrow\ \Rightarrow\ \mathbf{b}_{wt} \uparrow\ \Rightarrow</annotation></semantics></math>
+attention weight
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>↑</mo><mspace width="0.222em"></mspace><mo>⇒</mo></mrow><annotation encoding="application/x-tex">\uparrow\ \Rightarrow</annotation></semantics></math>
+ảnh hưởng đến prediction <strong>nhiều hơn</strong></li>
+<li><strong>Minimal-invasive modification</strong>: không đổi kiến trúc
+cơ bản, chỉ thêm 6 tham số và 1 phép cộng</li>
+<li><strong>WTSASRec vượt trội SASRec</strong> trên tất cả metrics trong
+thực nghiệm</li>
+</ul>
+</body>
+</html>
