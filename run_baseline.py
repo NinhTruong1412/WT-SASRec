@@ -265,8 +265,7 @@ def main():
             traceback.print_exc()
             all_results[model_name] = {"error": str(exc)}
 
-    if len(models_to_run) > 1:
-        save_results(all_results, label)
+    save_results(all_results, label)
 
 
 if __name__ == "__main__":

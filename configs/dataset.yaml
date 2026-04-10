@@ -34,8 +34,8 @@ valid_metric: NDCG@10
 
 # ── Training ─────────────────────────────────────────────────────────────────
 epochs: 50
-train_batch_size: 4096        # Larger batches = fewer iterations = faster on MPS
-eval_batch_size: 512
+train_batch_size: 8192        # RTX 3090 (24GB VRAM) — larger batches for faster training
+eval_batch_size: 1024
 stopping_step: 10             # Early stopping patience
 eval_step: 1                  # Evaluate every epoch
 learner: adam
@@ -43,7 +43,7 @@ learning_rate: 0.001
 neg_sampling: ~               # Sequential models use sampled softmax internally
 
 # ── Device ───────────────────────────────────────────────────────────────────
-use_gpu: true              # Use MPS on Apple Silicon (Metal Performance Shaders)
+use_gpu: true              # NVIDIA CUDA (RTX 3090) — auto-detected
 
 # ── Reproducibility ──────────────────────────────────────────────────────────
 seed: 42

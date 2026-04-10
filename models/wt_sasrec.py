@@ -142,7 +142,11 @@ class WTSASRec(SASRec):
 
         n_heads = config["n_heads"]
 
-        # Replace the standard transformer encoder with our WT-augmented one
+        # Replace the standard transformer encoder with our WT-augmented one.
+        # NOTE: super().__init__ calls self.apply(self._init_weights) before we
+        # swap the encoder, so the new WTTransformerEncoder layers would keep
+        # PyTorch's default (Kaiming-uniform) init — causing large attention
+        # scores and NaN loss.  Re-apply _init_weights after the swap.
         self.trm_encoder = WTTransformerEncoder(
             n_layers         = config["n_layers"],
             n_heads          = n_heads,
@@ -157,10 +161,22 @@ class WTSASRec(SASRec):
         # Project scalar watch time to one value per attention head
         self.wt_proj = nn.Linear(1, n_heads)
 
+        # Re-initialise ALL submodules with the same Normal(0, initializer_range)
+        # scheme SASRec uses, so newly-created layers are also properly scaled.
+        self.apply(self._init_weights)
+
+        # Start wt_alpha near zero so training begins like standard SASRec and
+        # gradually learns to incorporate watch-time signal.
+        for layer in self.trm_encoder.layer:
+            nn.init.zeros_(layer.multi_head_attention.wt_alpha)
+
     # ── Helpers ───────────────────────────────────────────────────────────────
 
     def _normalize_watch_time(self, wt_seq: torch.Tensor) -> torch.Tensor:
-        """Log-normalize watch time per sequence to [0, 1]."""
+        """Log-normalize watch time per sequence to [0, 1].
+        Clamps negative values (data corruption) to 0 before log1p.
+        """
+        wt_seq  = wt_seq.clamp(min=0.0)          # guard: log1p undefined for wt < -1
         log_wt  = torch.log1p(wt_seq)
         max_wt  = log_wt.max(dim=1, keepdim=True).values
         return log_wt / (max_wt + 1e-8)
@@ -170,8 +186,9 @@ class WTSASRec(SASRec):
         Returns watch-time bias: (B, L, num_heads).
         Each position's bias tells each attention head how strongly to up-weight that key.
         """
-        wt_norm = self._normalize_watch_time(wt_seq)   # (B, L)
-        return self.wt_proj(wt_norm.unsqueeze(-1))      # (B, L, H_heads)
+        wt_norm = self._normalize_watch_time(wt_seq)              # (B, L)
+        wt_bias = self.wt_proj(wt_norm.unsqueeze(-1))             # (B, L, H_heads)
+        return torch.clamp(wt_bias, -5.0, 5.0)                    # safety guard
 
     # ── Override forward ──────────────────────────────────────────────────────
 
