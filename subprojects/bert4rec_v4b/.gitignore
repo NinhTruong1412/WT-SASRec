@@ -1,0 +1,13 @@
+__pycache__/
+.pytest_cache/
+*.py[cod]
+*.parquet
+*.pth
+
+data/
+raw_data/
+log/
+log_tensorboard/
+results/
+saved/
+training_progress.jsonl

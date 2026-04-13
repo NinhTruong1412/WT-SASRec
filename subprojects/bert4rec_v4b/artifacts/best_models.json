@@ -1,0 +1,46 @@
+{
+  "dataset": "thesis_dataset",
+  "selection_policy": "Best committed full-data reference checkpoints from the root WT-SASRec experiment outputs.",
+  "reference_reports": [
+    {
+      "repo_path": "results/full_wt_significance_20260412_141656.md",
+      "purpose": "Full-data significance comparison used to select the best BERT4Rec and WTCausalBERT4RecV4b checkpoints."
+    },
+    {
+      "repo_path": "results/v4b_set_intersection_full_seed42.md",
+      "purpose": "Reference full-data set-intersection report for BERT4Rec vs WTCausalBERT4RecV4b."
+    }
+  ],
+  "models": {
+    "BERT4Rec": {
+      "checkpoint_repo_path": "saved/BERT4Rec-Apr-10-2026_18-20-11.pth",
+      "config_files": [
+        "configs/dataset.yaml",
+        "configs/bert4rec.yaml"
+      ],
+      "metrics": {
+        "ndcg@10": 0.2425,
+        "recall@10": 0.3941,
+        "mrr@10": 0.1954,
+        "hit@10": 0.3941
+      }
+    },
+    "WTCausalBERT4RecV4b": {
+      "checkpoint_repo_path": "saved/WTCausalBERT4RecV4b-Apr-12-2026_12-19-54.pth",
+      "config_files": [
+        "configs/dataset.yaml",
+        "configs/wt_causal_bert4rec_v4b.yaml"
+      ],
+      "metrics": {
+        "ndcg@10": 0.2454,
+        "recall@10": 0.3973,
+        "mrr@10": 0.1982,
+        "hit@10": 0.3973
+      },
+      "delta_vs_bert4rec": {
+        "ndcg@10": 0.0029,
+        "relative_pct": 1.2
+      }
+    }
+  }
+}

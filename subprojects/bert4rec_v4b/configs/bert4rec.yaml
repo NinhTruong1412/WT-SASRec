@@ -1,0 +1,15 @@
+model: BERT4Rec
+
+hidden_size: 64
+inner_size: 256
+num_attention_heads: 2
+num_hidden_layers: 2
+hidden_dropout_prob: 0.1
+attn_dropout_prob: 0.1
+hidden_act: gelu
+layer_norm_eps: 1e-12
+initializer_range: 0.02
+MAX_ITEM_LIST_LENGTH: 50
+mask_ratio: 0.2
+loss_type: CE
+train_neg_sample_args: ~

@@ -1,0 +1,38 @@
+# Mini dataset configuration for quick validation.
+dataset: mini_dataset
+data_path: data
+
+USER_ID_FIELD: user_id
+ITEM_ID_FIELD: item_id
+TIME_FIELD: timestamp
+
+load_col:
+  inter: [user_id, item_id, timestamp, watch_time, duration]
+
+user_inter_num_interval: "[5, inf)"
+item_inter_num_interval: "[1, inf)"
+
+eval_args:
+  split: {LS: valid_and_test}
+  order: TO
+  group_by: user
+  mode: full
+
+metrics: [Recall, NDCG, MRR, Hit]
+topk: [5, 10, 20]
+valid_metric: NDCG@10
+
+epochs: 20
+train_batch_size: 2048
+eval_batch_size: 512
+stopping_step: 5
+eval_step: 1
+learner: adam
+learning_rate: 0.001
+neg_sampling: ~
+
+use_gpu: true
+seed: 42
+reproducibility: True
+show_progress: True
+log_wandb: False
